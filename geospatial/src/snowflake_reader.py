@@ -54,6 +54,31 @@ def validate_gps_schema(cursor):
     print("\nGPS_DATA schema validation: PASSED")
     return True
 
+def validate_location_geometry(cursor):
+    """Validate the LOCATION geography column."""
+
+    cursor.execute("""
+        SELECT
+            COUNT(*) AS total_rows,
+            COUNT(LOCATION) AS location_rows,
+            COUNT_IF(ST_ISVALID(LOCATION)) AS valid_locations
+        FROM GEOPULSE.RAW.GPS_DATA
+    """)
+
+    total_rows, location_rows, valid_locations = cursor.fetchone()
+
+    print("\nLOCATION geometry validation:")
+    print(" - Total rows:", total_rows)
+    print(" - Non-null LOCATION:", location_rows)
+    print(" - Valid LOCATION:", valid_locations)
+
+    if total_rows == location_rows == valid_locations:
+        print("LOCATION geometry validation: PASSED")
+        return True
+
+    print("LOCATION geometry validation: FAILED")
+    return False
+
 def test_connection():
     """Test Snowflake connection and inspect GPS_DATA."""
     connection = get_connection()
@@ -70,6 +95,8 @@ def test_connection():
         print("GPS_DATA row count:", cursor.fetchone()[0])
 
         validate_gps_schema(cursor)
+
+        validate_location_geometry(cursor)
 
         cursor.execute("""
             SELECT *
