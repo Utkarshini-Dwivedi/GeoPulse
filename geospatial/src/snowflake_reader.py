@@ -18,6 +18,41 @@ def get_connection():
         schema=os.getenv("SNOWFLAKE_SCHEMA"),
     )
 
+def validate_gps_schema(cursor):
+    """Validate the structure of the GPS_DATA table."""
+
+    cursor.execute("""
+        SELECT *
+        FROM GEOPULSE.RAW.GPS_DATA
+        LIMIT 1
+    """)
+
+    columns = [column[0] for column in cursor.description]
+
+    expected_columns = [
+        "DEVICE_ID",
+        "LATITUDE",
+        "LONGITUDE",
+        "TIMESTAMP",
+        "STORE",
+        "LOCATION"
+    ]
+
+    print("\nGPS_DATA columns:")
+    for column in columns:
+        print(f" - {column}")
+
+    missing_columns = [
+        column for column in expected_columns
+        if column not in columns
+    ]
+
+    if missing_columns:
+        print("\nMissing columns:", missing_columns)
+        return False
+
+    print("\nGPS_DATA schema validation: PASSED")
+    return True
 
 def test_connection():
     """Test Snowflake connection and inspect GPS_DATA."""
@@ -33,6 +68,8 @@ def test_connection():
             FROM GEOPULSE.RAW.GPS_DATA
         """)
         print("GPS_DATA row count:", cursor.fetchone()[0])
+
+        validate_gps_schema(cursor)
 
         cursor.execute("""
             SELECT *
