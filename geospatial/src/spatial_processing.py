@@ -165,7 +165,24 @@ def create_gps_points(df):
     print("GPS geometry preview skipped")
     return spatial_df
 
-# 6. CREATE STORE REFERENCE POINTS
+#6. VALIDATE GPS GEOMETRY
+
+def validate_gps_geometry(df):
+
+    print("\nGPS GEOMETRY VALIDATION")
+
+    null_geometry = df.filter(
+        col("GPS_POINT").isNull()
+    ).count()
+
+    print("Null GPS geometries:", null_geometry)
+
+    if null_geometry == 0:
+        print("GPS geometry validation: PASSED")
+    else:
+        print("GPS geometry validation: FAILED")
+
+# 7. CREATE STORE REFERENCE POINTS
 
 def create_store_points(df):
 
@@ -201,7 +218,7 @@ def create_store_points(df):
 
     return store_points
 
-# 7. CREATE 500M CATCHMENT AREAS
+# 8. CREATE 500M CATCHMENT AREAS
 
 def create_catchments(store_points):
 
@@ -248,7 +265,7 @@ def create_catchments(store_points):
 
     return catchments
 
-# 8. PROJECT GPS POINTS
+# 9. PROJECT GPS POINTS
 
 def project_gps_points(gps_df):
 
@@ -270,7 +287,7 @@ def project_gps_points(gps_df):
         )
     )
 
-# 9. SPATIAL JOIN
+# 10. SPATIAL JOIN
 
 def spatial_join(gps_df, catchments):
 
@@ -307,7 +324,7 @@ def spatial_join(gps_df, catchments):
     print("Spatial join completed successfully")
     return joined
 
-# 10. CALCULATE DISTANCE TO STORE
+# 11. CALCULATE DISTANCE TO STORE
 
 def calculate_distance(gps_df, store_points):
 
@@ -363,7 +380,7 @@ def calculate_distance(gps_df, store_points):
 
     return nearest_store
 
-# 11. CREATE FINAL SPATIAL OUTPUT
+# 12. CREATE FINAL SPATIAL OUTPUT
 
 def create_final_output(gps_df, catchment_join, distance_df):
 
@@ -404,7 +421,7 @@ def create_final_output(gps_df, catchment_join, distance_df):
 
     return final_df
 
-# 12. VALIDATE SPATIAL RESULTS
+# 13. VALIDATE SPATIAL RESULTS
 
 def validate_results(final_df):
 
@@ -419,7 +436,7 @@ def validate_results(final_df):
     print("\nSample final records:")
     print("Final records preview skipped")
 
-# 13. MAIN PIPELINE
+# 14. MAIN PIPELINE
 
 def main():
 
@@ -437,9 +454,12 @@ def main():
         gps_df = create_gps_points(gps_df)
 
         # Step 4
+        validate_gps_geometry(gps_df)
+
+        #Step 5
         store_points = create_store_points(gps_df)
 
-        # Step 5
+        # Step 6
         store_points = (
             store_points
             .withColumn(
@@ -454,36 +474,36 @@ def main():
             )
         )
 
-        # Step 6
+        # Step 7
         catchments = create_catchments(
             store_points
         )
 
-        # Step 7
+        # Step 8
         gps_projected = project_gps_points(
             gps_df
         )
 
-        # Step 8
+        # Step 9
         catchment_join = spatial_join(
             gps_projected,
             catchments
         )
 
-        # Step 9
+        # Step 10
         distance_df = calculate_distance(
             gps_projected,
             store_points
         )
 
-        # Step 10
+        # Step 11
         final_df = create_final_output(
             gps_projected,
             catchment_join,
             distance_df
         )
 
-        # Step 11
+        # Step 12
         validate_results(final_df)
 
     finally:
