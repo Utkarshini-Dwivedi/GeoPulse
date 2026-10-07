@@ -233,10 +233,8 @@ def create_catchments(store_points):
 
     """
     Create 500 metre catchment areas around each store.
-
-    ST_Buffer on geographic coordinates uses the geometry's
-    coordinate system, so we transform to a projected CRS
-    before applying the 500m buffer.
+    ST_Buffer is applied after transforming store points
+    to a projected CRS where the unit is metres.
     """
 
     catchments = (
@@ -270,7 +268,31 @@ def create_catchments(store_points):
 
     print("\n500 metre catchments created")
 
-    print("500 metre catchments created successfully")
+    total_stores = store_points.count()
+
+    null_catchment_geometry = catchments.filter(
+        col("CATCHMENT_GEOMETRY").isNull()
+    ).count()
+
+    null_catchment_id = catchments.filter(
+        col("CATCHMENT_ID").isNull()
+    ).count()
+
+    total_catchments = catchments.count()
+
+    print("Total stores:", total_stores)
+    print("Total catchments:", total_catchments)
+    print("Null catchment geometries:", null_catchment_geometry)
+    print("Null catchment IDs:", null_catchment_id)
+
+    if (
+            total_stores == total_catchments
+            and null_catchment_geometry == 0
+            and null_catchment_id == 0
+    ):
+        print("500m catchment validation: PASSED")
+    else:
+        print("500m catchment validation: FAILED")
 
     return catchments
 
