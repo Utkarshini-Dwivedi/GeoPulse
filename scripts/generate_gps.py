@@ -14,7 +14,7 @@ stores = {
 # Generate synthetic GPS data
 rows = []
 
-num_devices = 7
+num_devices = 20
 days = 7
 
 start_time = datetime(2026, 9, 1, 6, 0, 0)
@@ -57,7 +57,7 @@ for device_num in range(1, num_devices + 1):
         current_time = start_time + timedelta(days=day + 1)
 
 # Save CSV
-output_file = "data/raw/synthetic_gps_data.csv"
+output_file = "data/raw/synthetic_gps_data_large.csv"
 
 with open(output_file, "w", newline="") as file:
     writer = csv.DictWriter(
