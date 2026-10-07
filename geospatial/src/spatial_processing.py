@@ -536,6 +536,77 @@ def validate_results(final_df):
     else:
         print("Final spatial validation: FAILED")
 
+def write_results_to_snowflake(final_df):
+    """
+    Write final spatial results to Snowflake.
+    """
+
+    connection = get_snowflake_connection()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            CREATE SCHEMA IF NOT EXISTS GEOPULSE.SPATIAL
+        """)
+
+        cursor.execute("""
+            CREATE OR REPLACE TABLE GEOPULSE.SPATIAL.GPS_STORE_MAPPING (
+                DEVICE_ID VARCHAR,
+                TIMESTAMP TIMESTAMP,
+                LATITUDE FLOAT,
+                LONGITUDE FLOAT,
+                STORE VARCHAR,
+                CALCULATED_STORE VARCHAR,
+                DISTANCE_TO_STORE FLOAT,
+                IN_CATCHMENT BOOLEAN,
+                CATCHMENT_ID VARCHAR,
+                STORE_ASSIGNMENT_COMPARISON VARCHAR
+            )
+        """)
+
+        rows = final_df.collect()
+
+        insert_sql = """
+            INSERT INTO GEOPULSE.SPATIAL.GPS_STORE_MAPPING (
+                DEVICE_ID,
+                TIMESTAMP,
+                LATITUDE,
+                LONGITUDE,
+                STORE,
+                CALCULATED_STORE,
+                DISTANCE_TO_STORE,
+                IN_CATCHMENT,
+                CATCHMENT_ID,
+                STORE_ASSIGNMENT_COMPARISON
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+        data = [
+            (
+                row.DEVICE_ID,
+                row.TIMESTAMP,
+                row.LATITUDE,
+                row.LONGITUDE,
+                row.STORE,
+                row.CALCULATED_STORE,
+                row.DISTANCE_TO_STORE,
+                row.IN_CATCHMENT,
+                row.CATCHMENT_ID,
+                row.STORE_ASSIGNMENT_COMPARISON
+            )
+            for row in rows
+        ]
+
+        cursor.executemany(insert_sql, data)
+        connection.commit()
+
+        print(f"Snowflake write completed: {len(data)} rows")
+
+    finally:
+        cursor.close()
+        connection.close()
+
 # 14. MAIN PIPELINE
 
 def main():
@@ -625,6 +696,7 @@ def main():
         # Step 12
         start = time.perf_counter()
         validate_results(final_df)
+        write_results_to_snowflake(final_df)
         print(f"Final validation: {time.perf_counter() - start:.2f} seconds")
 
         total_time = time.perf_counter() - pipeline_start
