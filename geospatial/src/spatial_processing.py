@@ -485,7 +485,21 @@ def create_final_output(gps_df, catchment_join, distance_df):
             )
             .otherwise(lit(False))
             .alias("IN_CATCHMENT"),
-            col("catchment.CATCHMENT_ID")
+            col("catchment.CATCHMENT_ID"),
+            when(
+                col("catchment.CALCULATED_STORE").isNull(),
+                lit("OUTSIDE_CATCHMENT")
+            )
+            .when(
+                col("distance.CALCULATED_STORE")
+                == col("catchment.CALCULATED_STORE"),
+                lit("MATCH")
+            )
+            .otherwise(
+                lit("MISMATCH")
+            )
+            .alias("STORE_ASSIGNMENT_COMPARISON")
+
         )
     )
 
