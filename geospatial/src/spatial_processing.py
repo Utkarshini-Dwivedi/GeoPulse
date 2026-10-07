@@ -508,17 +508,46 @@ def create_final_output(gps_df, catchment_join, distance_df):
 # 13. VALIDATE SPATIAL RESULTS
 
 def validate_results(final_df):
-
     print("\nFINAL SPATIAL VALIDATION")
-    total = "not calculated"
-    inside = "not calculated"
-    print("Total GPS events:", total)
-    print("Events inside catchment:", inside)
 
-    print("\nStore assignment comparison:")
-    print("Store assignment comparison skipped")
-    print("\nSample final records:")
-    print("Final records preview skipped")
+    stats = final_df.agg(
+        F.count("*").alias("total"),
+        F.sum(
+            F.when(
+                F.col("IN_CATCHMENT") == True,
+                1
+            ).otherwise(0)
+        ).alias("inside_catchment"),
+        F.sum(
+            F.when(
+                F.col("STORE_ASSIGNMENT_COMPARISON") == "MATCH",
+                1
+            ).otherwise(0)
+        ).alias("matching_assignments"),
+        F.sum(
+            F.when(
+                F.col("STORE_ASSIGNMENT_COMPARISON") == "MISMATCH",
+                1
+            ).otherwise(0)
+        ).alias("mismatching_assignments"),
+        F.sum(
+            F.when(
+                F.col("STORE_ASSIGNMENT_COMPARISON") == "OUTSIDE_CATCHMENT",
+                1
+            ).otherwise(0)
+        ).alias("outside_catchment")
+    ).first()
+
+    print("Total spatial records:", stats["total"])
+    print("Events inside catchment:", stats["inside_catchment"])
+    print("Matching store assignments:", stats["matching_assignments"])
+    print("Mismatching store assignments:", stats["mismatching_assignments"])
+    print("Events outside catchment:", stats["outside_catchment"])
+
+    if stats["total"] > 0:
+        print("Final spatial validation: PASSED")
+    else:
+        print("Final spatial validation: FAILED")
 
 # 14. MAIN PIPELINE
 
