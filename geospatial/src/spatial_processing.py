@@ -9,6 +9,7 @@ os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
 from dotenv import load_dotenv
+from pyspark.sql import functions as F
 import snowflake.connector
 
 from pyspark.sql import SparkSession
@@ -411,27 +412,42 @@ def calculate_distance(gps_df, store_points):
         )
     )
 
-    # Select nearest store for each GPS event
-    window = Window.partitionBy(
-        "DEVICE_ID",
-        "TIMESTAMP"
-    ).orderBy(
-        col("DISTANCE_METERS")
-    )
-
+    # Nearest store per GPS event, without a window sort
     nearest_store = (
         distance_df
-        .withColumn(
-            "ROW_NUMBER",
-            row_number().over(window)
+        .groupBy("DEVICE_ID", "TIMESTAMP")
+        .agg(
+            F.min(
+                F.struct(
+                    "DISTANCE_METERS",
+                    "CALCULATED_STORE",
+                    "SOURCE_STORE",
+                    "LATITUDE",
+                    "LONGITUDE",
+                )
+            ).alias("m")
         )
-        .filter(
-            col("ROW_NUMBER") == 1
-        )
-        .drop("ROW_NUMBER")
+        .select("DEVICE_ID", "TIMESTAMP", "m.*")
+        .cache()
     )
-    print("\nCALCULATED STORE ASSIGNMENT")
-    print("Nearest store assignment created successfully")
+
+    print("\nCALCULATED STORE ASSIGNMENT VALIDATION")
+
+    stats = nearest_store.agg(
+        F.count("*").alias("total"),
+        F.sum(F.when(F.col("CALCULATED_STORE").isNull(), 1).otherwise(0)).alias("null_store"),
+        F.sum(F.when(F.col("DISTANCE_METERS").isNull(), 1).otherwise(0)).alias("null_dist"),
+    ).first()
+
+    print("Total calculated store assignments:", stats["total"])
+    print("Null calculated store assignments:", stats["null_store"])
+    print("Null distances:", stats["null_dist"])
+
+    if stats["total"] > 0 and stats["null_store"] == 0 and stats["null_dist"] == 0:
+        print("Calculated store assignment validation: PASSED")
+    else:
+        print("Calculated store assignment validation: FAILED")
+
     return nearest_store
 
 # 12. CREATE FINAL SPATIAL OUTPUT
