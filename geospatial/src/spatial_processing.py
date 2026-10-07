@@ -1,4 +1,12 @@
 import os
+import sys
+
+os.environ["HADOOP_HOME"] = r"C:\hadoop"
+os.environ["hadoop.home.dir"] = r"C:\hadoop"
+os.environ["PATH"] = r"C:\hadoop\bin;" + os.environ["PATH"]
+
+os.environ["PYSPARK_PYTHON"] = sys.executable
+os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
 from dotenv import load_dotenv
 import snowflake.connector
@@ -18,10 +26,7 @@ from sedona.spark import SedonaContext
 
 load_dotenv()
 
-
-# ============================================================
 # 1. CREATE SPARK + SEDONA SESSION
-# ============================================================
 
 def create_sedona_session():
     """
@@ -41,7 +46,8 @@ def create_sedona_session():
         .config(
             "spark.jars.repositories",
             "https://artifacts.unidata.ucar.edu/repository/unidata-all"
-        )
+        ).config("spark.python.worker.faulthandler.enabled", "true")
+        .config("spark.sql.execution.pyspark.udf.faulthandler.enabled", "true")
         .getOrCreate()
     )
 
@@ -54,10 +60,7 @@ def create_sedona_session():
 
     return spark
 
-
-# ============================================================
 # 2. SNOWFLAKE CONNECTION
-# ============================================================
 
 def get_snowflake_connection():
     """
@@ -73,10 +76,7 @@ def get_snowflake_connection():
         schema=os.getenv("SNOWFLAKE_SCHEMA"),
     )
 
-
-# ============================================================
 # 3. READ GPS DATA FROM SNOWFLAKE
-# ============================================================
 
 def read_gps_data(spark):
     """
@@ -122,23 +122,25 @@ def read_gps_data(spark):
         cursor.close()
         connection.close()
 
-
-# ============================================================
 # 4. VALIDATE GPS DATA
-# ============================================================
 
 def validate_gps_data(df):
-
     print("\nGPS DATA VALIDATION")
-
     print("GPS DataFrame validation started")
 
-    invalid_coordinates = 0
+    invalid_coordinates = df.filter(
+        (col("LATITUDE") < -90) |
+        (col("LATITUDE") > 90) |
+        (col("LONGITUDE") < -180) |
+        (col("LONGITUDE") > 180)
+    ).count()
+
+    null_coordinates = df.filter(
+        col("LATITUDE").isNull() |
+        col("LONGITUDE").isNull()
+    ).count()
 
     print("Invalid coordinates:", invalid_coordinates)
-
-    null_coordinates = 0
-
     print("Null coordinates:", null_coordinates)
 
     if invalid_coordinates == 0 and null_coordinates == 0:
@@ -146,10 +148,7 @@ def validate_gps_data(df):
     else:
         print("GPS coordinate validation: FAILED")
 
-
-# ============================================================
 # 5. CREATE SEDONA GPS POINTS
-# ============================================================
 
 def create_gps_points(df):
 
@@ -166,10 +165,7 @@ def create_gps_points(df):
     print("GPS geometry preview skipped")
     return spatial_df
 
-
-# ============================================================
 # 6. CREATE STORE REFERENCE POINTS
-# ============================================================
 
 def create_store_points(df):
 
@@ -205,10 +201,7 @@ def create_store_points(df):
 
     return store_points
 
-
-# ============================================================
 # 7. CREATE 500M CATCHMENT AREAS
-# ============================================================
 
 def create_catchments(store_points):
 
@@ -255,10 +248,7 @@ def create_catchments(store_points):
 
     return catchments
 
-
-# ============================================================
 # 8. PROJECT GPS POINTS
-# ============================================================
 
 def project_gps_points(gps_df):
 
@@ -280,10 +270,7 @@ def project_gps_points(gps_df):
         )
     )
 
-
-# ============================================================
 # 9. SPATIAL JOIN
-# ============================================================
 
 def spatial_join(gps_df, catchments):
 
@@ -320,10 +307,7 @@ def spatial_join(gps_df, catchments):
     print("Spatial join completed successfully")
     return joined
 
-
-# ============================================================
 # 10. CALCULATE DISTANCE TO STORE
-# ============================================================
 
 def calculate_distance(gps_df, store_points):
 
@@ -379,10 +363,7 @@ def calculate_distance(gps_df, store_points):
 
     return nearest_store
 
-
-# ============================================================
 # 11. CREATE FINAL SPATIAL OUTPUT
-# ============================================================
 
 def create_final_output(gps_df, catchment_join, distance_df):
 
@@ -423,10 +404,7 @@ def create_final_output(gps_df, catchment_join, distance_df):
 
     return final_df
 
-
-# ============================================================
 # 12. VALIDATE SPATIAL RESULTS
-# ============================================================
 
 def validate_results(final_df):
 
@@ -440,9 +418,8 @@ def validate_results(final_df):
     print("Store assignment comparison skipped")
     print("\nSample final records:")
     print("Final records preview skipped")
-# ============================================================
+
 # 13. MAIN PIPELINE
-# ============================================================
 
 def main():
 
