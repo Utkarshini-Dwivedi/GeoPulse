@@ -92,26 +92,12 @@ def read_gps_data(spark):
     try:
 
         cursor.execute("""
-            SELECT
-                DEVICE_ID,
-                LATITUDE,
-                LONGITUDE,
-                TIMESTAMP,
-                STORE,
-                LOCATION
-            FROM GEOPULSE.RAW.GPS_DATA
+            SELECT DEVICE_ID, LATITUDE, LONGITUDE, TIMESTAMP, STORE FROM GEOPULSE.RAW.GPS_DATA
         """)
 
         rows = cursor.fetchall()
 
-        columns = [
-            "DEVICE_ID",
-            "LATITUDE",
-            "LONGITUDE",
-            "TIMESTAMP",
-            "STORE",
-            "LOCATION"
-        ]
+        columns = ["DEVICE_ID", "LATITUDE", "LONGITUDE", "TIMESTAMP", "STORE"]
 
         df = spark.createDataFrame(rows, columns)
 
