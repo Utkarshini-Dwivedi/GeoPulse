@@ -350,8 +350,30 @@ def spatial_join(gps_df, catchments):
         )
     )
 
-    print("\nSPATIAL JOIN RESULTS")
-    print("Spatial join preview skipped")
+    print("\nSPATIAL JOIN VALIDATION")
+
+    joined_records = joined.count()
+
+    null_calculated_store = joined.filter(
+        col("CALCULATED_STORE").isNull()
+    ).count()
+
+    null_catchment_id = joined.filter(
+        col("CATCHMENT_ID").isNull()
+    ).count()
+
+    print("GPS events assigned to catchment:", joined_records)
+    print("Null calculated stores:", null_calculated_store)
+    print("Null catchment IDs:", null_catchment_id)
+
+    if (
+        null_calculated_store == 0
+        and null_catchment_id == 0
+    ):
+        print("Spatial join validation: PASSED")
+    else:
+        print("Spatial join validation: FAILED")
+
     print("Spatial join completed successfully")
     return joined
 
