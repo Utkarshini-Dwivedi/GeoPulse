@@ -188,7 +188,6 @@ def create_store_points(df):
 
     """
     Create store reference points from the GPS data.
-
     STORE is used only to derive the store reference location.
     Spatial assignment itself is performed using Sedona geometry.
     """
@@ -209,12 +208,22 @@ def create_store_points(df):
 
     print("\nSTORE REFERENCE POINTS")
 
-    store_points.select(
-        "STORE",
-        "STORE_LATITUDE",
-        "STORE_LONGITUDE",
-        "STORE_POINT"
-    )
+    null_store_coordinates = store_points.filter(
+        col("STORE_LATITUDE").isNull() |
+        col("STORE_LONGITUDE").isNull()
+    ).count()
+
+    null_store_geometry = store_points.filter(
+        col("STORE_POINT").isNull()
+    ).count()
+
+    print("Stores with null coordinates:", null_store_coordinates)
+    print("Stores with null geometry:", null_store_geometry)
+
+    if null_store_coordinates == 0 and null_store_geometry == 0:
+        print("Store reference-point validation: PASSED")
+    else:
+        print("Store reference-point validation: FAILED")
 
     return store_points
 
