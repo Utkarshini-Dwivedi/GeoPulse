@@ -550,7 +550,7 @@ def write_results_to_snowflake(final_df):
         """)
 
         cursor.execute("""
-            CREATE OR REPLACE TABLE GEOPULSE.SPATIAL.GPS_STORE_MAPPING (
+            CREATE TABLE IF NOT EXISTS GEOPULSE.SPATIAL.GPS_STORE_MAPPING (
                 DEVICE_ID VARCHAR,
                 TIMESTAMP TIMESTAMP,
                 LATITUDE FLOAT,
