@@ -383,7 +383,7 @@ def calculate_distance(gps_df, store_points):
 
     """
     Calculate distance between GPS point and store point
-    using projected coordinates.
+    using projected coordinates and assign the nearest store.
     """
 
     gps = gps_df.alias("gps")
@@ -430,7 +430,8 @@ def calculate_distance(gps_df, store_points):
         )
         .drop("ROW_NUMBER")
     )
-
+    print("\nCALCULATED STORE ASSIGNMENT")
+    print("Nearest store assignment created successfully")
     return nearest_store
 
 # 12. CREATE FINAL SPATIAL OUTPUT
