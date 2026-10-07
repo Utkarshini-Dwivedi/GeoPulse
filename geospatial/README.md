@@ -20,25 +20,23 @@ GPS mobility data is stored in Snowflake:
 
 ## Processing Pipeline
 
-Snowflake GPS_DATA
+```text
+Snowflake RAW.GPS_DATA
         ↓
-     PySpark
+GPS Coordinate Validation
         ↓
- Apache Sedona
+GPS Spatial Points
         ↓
- GPS Spatial Points
+Store Reference Points
         ↓
- Store Spatial Points
+500m Catchment Areas
         ↓
- 500m Catchment Areas
+Spatial Join
         ↓
- Spatial Join
+Calculated Store Assignment
         ↓
- Device → Store Mapping
+Nearest Store & Distance Calculation
         ↓
- Snowflake
-
-## Planned Output
-
-The processed spatial dataset will contain GPS records
-associated with the calculated store catchment area.
+Spatial Validation
+        ↓
+Snowflake SPATIAL.GPS_STORE_MAPPING
