@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 os.environ["HADOOP_HOME"] = r"C:\hadoop"
 os.environ["hadoop.home.dir"] = r"C:\hadoop"
@@ -552,27 +553,39 @@ def validate_results(final_df):
 # 14. MAIN PIPELINE
 
 def main():
-
     spark = create_sedona_session()
 
     try:
 
+        pipeline_start = time.perf_counter()
+
         # Step 1
+        start = time.perf_counter()
         gps_df = read_gps_data(spark)
+        print(f"Read GPS data: {time.perf_counter() - start:.2f} seconds")
 
         # Step 2
+        start = time.perf_counter()
         validate_gps_data(gps_df)
+        print(f"GPS validation: {time.perf_counter() - start:.2f} seconds")
 
         # Step 3
+        start = time.perf_counter()
         gps_df = create_gps_points(gps_df)
+        print(f"Create GPS points: {time.perf_counter() - start:.2f} seconds")
 
         # Step 4
+        start = time.perf_counter()
         validate_gps_geometry(gps_df)
+        print(f"GPS geometry validation: {time.perf_counter() - start:.2f} seconds")
 
-        #Step 5
+        # Step 5
+        start = time.perf_counter()
         store_points = create_store_points(gps_df)
+        print(f"Create store points: {time.perf_counter() - start:.2f} seconds")
 
         # Step 6
+        start = time.perf_counter()
         store_points = (
             store_points
             .withColumn(
@@ -586,45 +599,57 @@ def main():
                 )
             )
         )
+        print(f"Project store points: {time.perf_counter() - start:.2f} seconds")
 
         # Step 7
-        catchments = create_catchments(
-            store_points
-        )
+        start = time.perf_counter()
+        catchments = create_catchments(store_points)
+        print(f"Create catchments: {time.perf_counter() - start:.2f} seconds")
 
         # Step 8
-        gps_projected = project_gps_points(
-            gps_df
-        )
+        start = time.perf_counter()
+        gps_projected = project_gps_points(gps_df)
+        print(f"Project GPS points: {time.perf_counter() - start:.2f} seconds")
 
         # Step 9
+        start = time.perf_counter()
         catchment_join = spatial_join(
             gps_projected,
             catchments
         )
+        print(f"Spatial join: {time.perf_counter() - start:.2f} seconds")
 
         # Step 10
+        start = time.perf_counter()
         distance_df = calculate_distance(
             gps_projected,
             store_points
         )
+        print(f"Distance calculation: {time.perf_counter() - start:.2f} seconds")
 
         # Step 11
+        start = time.perf_counter()
         final_df = create_final_output(
             gps_projected,
             catchment_join,
             distance_df
         )
+        print(f"Create final output: {time.perf_counter() - start:.2f} seconds")
 
         # Step 12
+        start = time.perf_counter()
         validate_results(final_df)
+        print(f"Final validation: {time.perf_counter() - start:.2f} seconds")
+
+        total_time = time.perf_counter() - pipeline_start
+
+        print(f"\nTotal pipeline execution time: {total_time:.2f} seconds")
 
     finally:
 
         spark.stop()
 
         print("\nGeoPulse spatial processing completed.")
-
 
 if __name__ == "__main__":
     main()
